@@ -73,6 +73,7 @@ public class AllAnimeFrame extends JFrame {
         setVisible(true);
     }
 
+
     private void loadAnime() {
         try {
             ArrayList<Anime> list = BDAnime.getAllAnime();

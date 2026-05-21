@@ -52,6 +52,7 @@ public class AnimeInfoFrame extends JFrame {
             e.printStackTrace();
         }
 
+
         buttonFavorite.addActionListener(e -> {
             try {
                 BDAnime.manageFavorite(userId, animeId, true);

@@ -70,6 +70,7 @@ public class MainFrame extends JFrame {
             }
         });
 
+
         buttonAllAnime.addActionListener(e -> {
             new AllAnimeFrame(currentUserId);
         });

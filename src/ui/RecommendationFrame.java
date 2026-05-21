@@ -71,6 +71,7 @@ public class RecommendationFrame extends JFrame {
         setVisible(true);
     }
 
+
     private void loadRecommendations() {
         try {
             ArrayList<Anime> list = BDAnime.getRecommendations(userId);

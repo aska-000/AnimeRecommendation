@@ -16,6 +16,7 @@ public class Anime {
         this.description = description;
     }
 
+
     @Override
     public String toString() {
         return  id + " | " + title + " | " + genre + " | " + rating;

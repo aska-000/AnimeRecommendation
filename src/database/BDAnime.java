@@ -10,6 +10,7 @@ public class BDAnime {
     public static ResultSet rs;
     private static ArrayList<Anime> list = new ArrayList<>();
 
+
     public static void connectionDB() throws ClassNotFoundException, SQLException {
         Class.forName("org.sqlite.JDBC");
         conn = DriverManager.getConnection("jdbc:sqlite:anime_data.db");

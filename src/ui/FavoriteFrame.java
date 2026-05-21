@@ -73,6 +73,7 @@ public class FavoriteFrame extends JFrame {
         setVisible(true);
     }
 
+
     private void loadFavorites() {
         try {
             ArrayList<Anime> list = BDAnime.getFavorites(userId);
