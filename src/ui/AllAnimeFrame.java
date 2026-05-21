@@ -86,3 +86,4 @@ public class AllAnimeFrame extends JFrame {
         }
     }
 }
+
