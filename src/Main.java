@@ -10,8 +10,7 @@ public class Main {
             BDAnime.initSchema();
             BDAnime.seedData();
 
-            // Если захотите запустить ваше графическое окно, раскомментируйте строку ниже:
-            // new MainFrame();
+            new MainFrame();
 
             System.out.println("Система рекомендаций Аниме");
             System.out.print("Авторизация. Введите имя пользователя: ");
