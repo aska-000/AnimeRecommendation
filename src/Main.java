@@ -1,5 +1,5 @@
 import database.BDAnime;
-import ui.MainFrame;
+import ui.LoginFrame;
 
 public class Main {
     public static void main(String[] args) {
@@ -7,9 +7,11 @@ public class Main {
             BDAnime.connectionDB();
             BDAnime.initSchema();
             BDAnime.seedData();
-            new MainFrame();
+            new LoginFrame();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 }
+
+
