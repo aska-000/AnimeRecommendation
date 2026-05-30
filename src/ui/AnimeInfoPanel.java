@@ -2,10 +2,12 @@ package ui;
 
 import database.BDAnime;
 import model.Anime;
-import styles.UIStyles;
 import styles.ModernScrollBarUI;
+import styles.UIStyles;
+
 import javax.swing.*;
 import java.awt.*;
+import java.net.URL;
 
 public class AnimeInfoPanel extends JPanel {
     public AnimeInfoPanel(int userId, int animeId, boolean fromFavorites) {
@@ -85,6 +87,9 @@ public class AnimeInfoPanel extends JPanel {
             rating.setFont(new Font("SansSerif", Font.BOLD, 22));
             rating.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+            // Этот блок уже должен быть в вашем AnimeInfoPanel.java
+// Найдите и убедитесь, что код выглядит так:
+
             JPanel imagePanel = new JPanel();
             imagePanel.setBackground(UIStyles.BACKGROUND);
             imagePanel.setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -92,13 +97,15 @@ public class AnimeInfoPanel extends JPanel {
 
             try {
                 String imagePath = anime.imagePath;
-                ImageIcon imageIcon = new ImageIcon(imagePath);
+                System.out.println("Загружаю картинку: " + imagePath);
+                ImageIcon imageIcon = new ImageIcon(new URL(imagePath));
                 Image image = imageIcon.getImage();
                 Image scaledImage = image.getScaledInstance(300, 400, Image.SCALE_SMOOTH);
                 JLabel imageLabel = new JLabel(new ImageIcon(scaledImage));
                 imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
                 imagePanel.add(imageLabel);
             } catch (Exception e) {
+                System.out.println("Ошибка загрузки картинки: " + e.getMessage());
                 JLabel noImage = new JLabel("Нет изображения");
                 noImage.setForeground(Color.GRAY);
                 noImage.setFont(new Font("SansSerif", Font.PLAIN, 14));

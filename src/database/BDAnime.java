@@ -1,6 +1,14 @@
 package database;
 
+import api.ShikimoriAPIService;
 import model.Anime;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -74,74 +82,176 @@ public class BDAnime {
             ps.setString(5, a[4]);
             ps.executeUpdate();
         }
+        System.out.println("Статические данные загружены");
     }
+
+    public static void syncWithAPI() throws IOException, InterruptedException, SQLException {
+        ShikimoriAPIService apiService = new ShikimoriAPIService();
+        ArrayList<Anime> apiAnimeList = apiService.fetchTopAnime(50);
+
+        System.out.println("Получено из API Shikimori: " + apiAnimeList.size() + " аниме");
+
+        String sql = "INSERT OR REPLACE INTO anime (id, title, genre, rating, description, image_path) VALUES (?, ?, ?, ?, ?, ?)";
+        PreparedStatement ps = conn.prepareStatement(sql);
+
+        int count = 0;
+        for (Anime anime : apiAnimeList) {
+            ps.setInt(1, anime.id);
+            ps.setString(2, anime.title);
+            ps.setString(3, anime.genre);
+            ps.setDouble(4, anime.rating);
+            ps.setString(5, anime.description);
+            ps.setString(6, anime.imagePath);
+            ps.executeUpdate();
+            count++;
+            System.out.println("Сохранено: " + anime.id + " - " + anime.title);
+        }
+        System.out.println("Сохранено в БД: " + count + " аниме");
+    }
+
+    private static String downloadImage(String imageUrl, int animeId) {
+        String localPath = "downloaded_images/" + animeId + ".jpg";
+
+        try {
+            URL url = new URL(imageUrl);
+            try (InputStream in = url.openStream()) {
+                Files.copy(in, Paths.get(localPath), StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("Скачана картинка: " + animeId);
+            }
+            return localPath;
+        } catch (Exception e) {
+            System.out.println("Не удалось скачать картинку для " + animeId + ": " + imageUrl);
+            return imageUrl; // возвращаем оригинальный URL если не удалось скачать
+        }
+    }
+
     public static int checkUser(String name) throws SQLException {
         String insertSql = "INSERT OR IGNORE INTO users(username) VALUES(?)";
         PreparedStatement psIns = conn.prepareStatement(insertSql);
         psIns.setString(1, name);
         psIns.executeUpdate();
+
         String selectSql = "SELECT id FROM users WHERE username = ?";
         PreparedStatement psSel = conn.prepareStatement(selectSql);
         psSel.setString(1, name);
         ResultSet userRs = psSel.executeQuery();
+
         return userRs.next() ? userRs.getInt("id") : 1;
     }
+
     public static void manageFavorite(int userId, int animeId, boolean add) throws SQLException {
-        String sql = "INSERT INTO activity " + "(user_id, anime_id, is_fav) " + "VALUES (?, ?, ?) " + "ON CONFLICT(user_id, anime_id) " + "DO UPDATE SET is_fav = excluded.is_fav";
+        String sql = "INSERT INTO activity " +
+                "(user_id, anime_id, is_fav) " +
+                "VALUES (?, ?, ?) " +
+                "ON CONFLICT(user_id, anime_id) " +
+                "DO UPDATE SET is_fav = excluded.is_fav";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, userId);
         ps.setInt(2, animeId);
         ps.setInt(3, add ? 1 : 0);
         ps.executeUpdate();
     }
+
     public static void markAsWatched(int userId, int animeId) throws SQLException {
-        String sql = "INSERT INTO activity " + "(user_id, anime_id, watched) " + "VALUES (?, ?, 1) " + "ON CONFLICT(user_id, anime_id) " + "DO UPDATE SET watched = 1";
+        String sql = "INSERT INTO activity " +
+                "(user_id, anime_id, watched) " +
+                "VALUES (?, ?, 1) " +
+                "ON CONFLICT(user_id, anime_id) " +
+                "DO UPDATE SET watched = 1";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, userId);
         ps.setInt(2, animeId);
         ps.executeUpdate();
     }
+
     public static ArrayList<Anime> getAllAnime() throws SQLException {
         ArrayList<Anime> list = new ArrayList<>();
-        rs = stat.executeQuery("SELECT * FROM anime LIMIT 20");
+        rs = stat.executeQuery("SELECT * FROM anime");
         while (rs.next()) {
-            list.add(new Anime(rs.getInt("id"), rs.getString("title"), rs.getString("genre"), rs.getDouble("rating"), rs.getString("description"), rs.getString("image_path")));
+            list.add(new Anime(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("genre"),
+                    rs.getDouble("rating"),
+                    rs.getString("description"),
+                    rs.getString("image_path")
+            ));
         }
         return list;
     }
+
     public static Anime getAnimeById(int id) throws SQLException {
         String sql = "SELECT * FROM anime WHERE id = ?";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, id);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
-            return new Anime(rs.getInt("id"), rs.getString("title"), rs.getString("genre"), rs.getDouble("rating"), rs.getString("description"), rs.getString("image_path"));
+            return new Anime(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("genre"),
+                    rs.getDouble("rating"),
+                    rs.getString("description"),
+                    rs.getString("image_path")
+            );
         }
         return null;
     }
+
     public static ArrayList<Anime> getFavorites(int userId) throws SQLException {
         ArrayList<Anime> list = new ArrayList<>();
-        String sql = "SELECT a.* FROM anime a " + "JOIN activity act " + "ON a.id = act.anime_id " + "WHERE act.user_id = ? " + "AND act.is_fav = 1";
+        String sql = "SELECT a.* FROM anime a " +
+                "JOIN activity act " +
+                "ON a.id = act.anime_id " +
+                "WHERE act.user_id = ? " +
+                "AND act.is_fav = 1";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, userId);
         ResultSet rs = ps.executeQuery();
         while (rs.next()) {
-            list.add(new Anime(rs.getInt("id"), rs.getString("title"), rs.getString("genre"), rs.getDouble("rating"), rs.getString("description"), rs.getString("image_path")));
+            list.add(new Anime(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("genre"),
+                    rs.getDouble("rating"),
+                    rs.getString("description"),
+                    rs.getString("image_path")
+            ));
         }
         return list;
     }
+
     public static ArrayList<Anime> getRecommendations(int userId) throws SQLException {
         ArrayList<Anime> list = new ArrayList<>();
-        String sql = "SELECT * FROM anime WHERE genre IN (" + "SELECT genre FROM anime a " + "JOIN activity act " + "ON a.id = act.anime_id " + "WHERE act.user_id = ? " + "AND act.watched = 1" + ") " + "AND id NOT IN (" + "SELECT anime_id FROM activity " + "WHERE user_id = ? " + "AND watched = 1" + ") " + "LIMIT 20";
+        String sql = "SELECT * FROM anime WHERE genre IN (" +
+                "SELECT genre FROM anime a " +
+                "JOIN activity act " +
+                "ON a.id = act.anime_id " +
+                "WHERE act.user_id = ? " +
+                "AND act.watched = 1" +
+                ") " +
+                "AND id NOT IN (" +
+                "SELECT anime_id FROM activity " +
+                "WHERE user_id = ? " +
+                "AND watched = 1" +
+                ")";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, userId);
         ps.setInt(2, userId);
         ResultSet rs = ps.executeQuery();
         while (rs.next()) {
-            list.add(new Anime(rs.getInt("id"), rs.getString("title"), rs.getString("genre"), rs.getDouble("rating"), rs.getString("description"), rs.getString("image_path")));
+            list.add(new Anime(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("genre"),
+                    rs.getDouble("rating"),
+                    rs.getString("description"),
+                    rs.getString("image_path")
+            ));
         }
         return list;
     }
+
     public static void closeDB() throws SQLException {
         if (rs != null) rs.close();
         if (stat != null) stat.close();
