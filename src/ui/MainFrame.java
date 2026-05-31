@@ -1,6 +1,8 @@
 package ui;
 
+import service.AnimeService;
 import styles.UIStyles;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -8,10 +10,12 @@ public class MainFrame extends JFrame {
     public static JPanel contentPanel;
     public static int currentUserId;
     public static String currentUsername;
+    public static AnimeService service;
 
     public MainFrame(int userId, String username) {
         currentUserId = userId;
         currentUsername = username;
+        service = new AnimeService();
 
         setTitle("AnimeRecs");
         setSize(1600, 900);

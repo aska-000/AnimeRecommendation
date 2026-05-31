@@ -47,9 +47,9 @@ public class ShikimoriAPIService {
             SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             return new OkHttpClient.Builder()
-                    .connectTimeout(120, TimeUnit.SECONDS)
-                    .readTimeout(120, TimeUnit.SECONDS)
-                    .writeTimeout(120, TimeUnit.SECONDS)
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
                     .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
                     .hostnameVerifier((hostname, session) -> true)
                     .retryOnConnectionFailure(true)
@@ -57,8 +57,8 @@ public class ShikimoriAPIService {
         } catch (Exception e) {
             e.printStackTrace();
             return new OkHttpClient.Builder()
-                    .connectTimeout(120, TimeUnit.SECONDS)
-                    .readTimeout(120, TimeUnit.SECONDS)
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
                     .build();
         }
     }
@@ -67,10 +67,8 @@ public class ShikimoriAPIService {
         ArrayList<Anime> allAnime = new ArrayList<>();
         int page = 1;
         int fetched = 0;
-        int attempts = 0;
-        int maxAttempts = 150;
 
-        while (fetched < limit && attempts < maxAttempts) {
+        while (fetched < limit && page <= 10) {
             String url = BASE_URL + "/animes?page=" + page + "&limit=" + Math.min(50, limit - fetched) + "&order=popularity";
 
             System.out.println("Загружаю страницу " + page + "...");
@@ -82,10 +80,16 @@ public class ShikimoriAPIService {
                     .build();
 
             try (Response response = client.newCall(request).execute()) {
+                if (response.code() == 429) {
+                    System.out.println("Лимит запросов, жду 10 секунд...");
+                    Thread.sleep(10000);
+                    continue;
+                }
+
                 if (!response.isSuccessful()) {
                     System.out.println("Ошибка HTTP: " + response.code());
                     page++;
-                    Thread.sleep(1000);
+                    Thread.sleep(2000);
                     continue;
                 }
 
@@ -126,29 +130,22 @@ public class ShikimoriAPIService {
                     String genre = fetchOneGenreForAnime(id);
                     String description = fetchDescriptionForAnime(id);
 
-                    attempts++;
-
-                    if (genre.equals("Не указан") && description.equals("Описание отсутствует")) {
-                        System.out.println("Пропущено (нет данных): " + title);
-                        continue;
-                    }
-
                     Anime anime = new Anime(id, title, genre, rating, description, imageUrl);
                     allAnime.add(anime);
                     fetched++;
 
                     String shortDesc = description.length() > 50 ? description.substring(0, 50) + "..." : description;
-                    System.out.println("Загружено: " + id + " | " + title + " | " + genre + " | " + shortDesc);
+                    System.out.println("Загружено: " + id + " | " + title + " | Жанр: " + genre + " | Описание: " + shortDesc);
 
-                    Thread.sleep(500);
+                    Thread.sleep(1000);
                 }
 
                 page++;
-                Thread.sleep(1000);
+                Thread.sleep(2000);
             } catch (Exception e) {
                 System.out.println("Ошибка при загрузке страницы " + page + ": " + e.getMessage());
                 page++;
-                Thread.sleep(2000);
+                Thread.sleep(3000);
             }
         }
 
@@ -156,7 +153,7 @@ public class ShikimoriAPIService {
         return allAnime;
     }
 
-    private String fetchOneGenreForAnime(int animeId) throws IOException, InterruptedException {
+    private String fetchOneGenreForAnime(int animeId) {
         String url = BASE_URL + "/animes/" + animeId;
 
         Request request = new Request.Builder()
@@ -165,6 +162,11 @@ public class ShikimoriAPIService {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
+            if (response.code() == 429) {
+                Thread.sleep(5000);
+                return fetchOneGenreForAnime(animeId);
+            }
+
             if (!response.isSuccessful()) {
                 return "Не указан";
             }
@@ -197,7 +199,7 @@ public class ShikimoriAPIService {
         }
     }
 
-    private String fetchDescriptionForAnime(int animeId) throws IOException, InterruptedException {
+    private String fetchDescriptionForAnime(int animeId) {
         String url = BASE_URL + "/animes/" + animeId;
 
         Request request = new Request.Builder()
@@ -206,6 +208,11 @@ public class ShikimoriAPIService {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
+            if (response.code() == 429) {
+                Thread.sleep(5000);
+                return fetchDescriptionForAnime(animeId);
+            }
+
             if (!response.isSuccessful()) {
                 return "Описание отсутствует";
             }
@@ -216,11 +223,49 @@ public class ShikimoriAPIService {
             if (animeJson.has("description") && !animeJson.get("description").isJsonNull()) {
                 String description = animeJson.get("description").getAsString();
                 if (description != null && !description.isEmpty()) {
+                    description = description.replaceAll("\\[character=\\d+\\]", "");
+                    description = description.replaceAll("\\[/character\\]", "");
+                    description = description.replaceAll("\\[anime=\\d+\\]", "");
+                    description = description.replaceAll("\\[/anime\\]", "");
+                    description = description.replaceAll("\\[url=https?://[^\\]]+\\]", "");
+                    description = description.replaceAll("\\[/url\\]", "");
+                    description = description.replaceAll("\\[b\\]", "");
+                    description = description.replaceAll("\\[/b\\]", "");
+                    description = description.replaceAll("\\[i\\]", "");
+                    description = description.replaceAll("\\[/i\\]", "");
+
+                    description = description.replaceAll("\\[\\[(.*?)\\]\\]", "$1");
+
+                    description = description.replaceAll("\\[(.*?)\\]", "$1");
+
                     description = description.replaceAll("<[^>]*>", "");
+
                     description = description.replaceAll("&nbsp;", " ");
                     description = description.replaceAll("&quot;", "\"");
                     description = description.replaceAll("&amp;", "&");
-                    description = cleanDescription(description);
+                    description = description.replaceAll("&lt;", "<");
+                    description = description.replaceAll("&gt;", ">");
+
+                    description = description.replaceAll("[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF]", "");
+
+                    description = description.replaceAll("\\s*[（(][^)]*[）)]\\s*", " ");
+
+                    description = description.replaceAll("\\n{3,}", "\n\n");
+
+                    description = description.replaceAll("(?m)^\\s+", "");
+                    description = description.replaceAll("(?m)\\s+$", "");
+
+                    description = description.replaceAll("\\s{2,}", " ");
+
+                    description = description.replaceAll("url=", "");
+
+                    description = description.replaceAll("person=", "");
+
+                    description = description.trim();
+
+                    if (description.isEmpty()) {
+                        return "Описание отсутствует";
+                    }
                     return description;
                 }
             }
@@ -229,29 +274,5 @@ public class ShikimoriAPIService {
         } catch (Exception e) {
             return "Описание отсутствует";
         }
-    }
-
-    private String cleanDescription(String description) {
-        if (description == null || description.isEmpty()) {
-            return "Описание отсутствует";
-        }
-
-        description = description.replaceAll("\\[character=\\d+\\]", "");
-        description = description.replaceAll("\\[/character\\]", "");
-        description = description.replaceAll("\\[\\[(.*?)\\]\\]", "$1");
-        description = description.replaceAll("\\[(.*?)\\]", "$1");
-        description = description.replaceAll("[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF\\uFF65-\\uFF9F]", "");
-        description = description.replaceAll("\\s*[（(][^)]*[）)]\\s*", " ");
-        description = description.replaceAll("\\n{3,}", "\n\n");
-        description = description.replaceAll("(?m)^\\s+", "");
-        description = description.replaceAll("(?m)\\s+$", "");
-        description = description.replaceAll("\\s{2,}", " ");
-        description = description.trim();
-
-        if (description.isEmpty()) {
-            return "Описание отсутствует";
-        }
-
-        return description;
     }
 }

@@ -1,9 +1,9 @@
 package ui;
 
-import database.BDAnime;
 import model.Anime;
-import styles.UIStyles;
 import styles.ModernScrollBarUI;
+import styles.UIStyles;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
@@ -109,15 +109,15 @@ public class AnimeListPanel extends JPanel {
             switch (type) {
                 case "all":
                     title.setText("Все аниме");
-                    allAnimeList = BDAnime.getAllAnime();
+                    allAnimeList = MainFrame.service.getAllAnime();
                     break;
                 case "favorites":
                     title.setText("Избранное");
-                    allAnimeList = BDAnime.getFavorites(userId);
+                    allAnimeList = MainFrame.service.getUserFavorites(userId);
                     break;
                 case "recommendations":
                     title.setText("Рекомендации");
-                    allAnimeList = BDAnime.getRecommendations(userId);
+                    allAnimeList = MainFrame.service.getRecommendationsForUser(userId);
                     break;
             }
 

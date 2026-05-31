@@ -1,6 +1,5 @@
 package ui;
 
-import database.BDAnime;
 import model.Anime;
 import styles.ModernScrollBarUI;
 import styles.UIStyles;
@@ -15,8 +14,15 @@ public class AnimeInfoPanel extends JPanel {
         setBackground(UIStyles.BACKGROUND);
 
         try {
-            Anime anime = BDAnime.getAnimeById(animeId);
-            BDAnime.markAsWatched(userId, animeId);
+            Anime anime = MainFrame.service.getAnimeById(animeId);
+            if (anime == null) {
+                JLabel error = new JLabel("Аниме не найдено");
+                error.setForeground(Color.WHITE);
+                add(error);
+                return;
+            }
+
+            MainFrame.service.markAsWatched(userId, animeId);
 
             JPanel bottomPanel = new JPanel();
             bottomPanel.setBackground(UIStyles.BACKGROUND);
@@ -33,8 +39,8 @@ public class AnimeInfoPanel extends JPanel {
                 JButton fav = UIStyles.createButton("В избранное");
                 fav.addActionListener(e -> {
                     try {
-                        BDAnime.manageFavorite(userId, animeId, true);
-                        JOptionPane.showMessageDialog(this, "Добавлено в избранное");
+                        MainFrame.service.addToFavorites(userId, animeId);
+                        JOptionPane.showMessageDialog(AnimeInfoPanel.this, "Добавлено в избранное");
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
@@ -56,7 +62,7 @@ public class AnimeInfoPanel extends JPanel {
                 });
                 removeFav.addActionListener(e -> {
                     try {
-                        BDAnime.manageFavorite(userId, animeId, false);
+                        MainFrame.service.removeFromFavorites(userId, animeId);
                         JOptionPane.showMessageDialog(AnimeInfoPanel.this, "Удалено из избранного");
                         MainFrame.switchPanel(new AnimeListPanel(userId, "favorites"));
                     } catch (Exception ex) {
@@ -77,7 +83,7 @@ public class AnimeInfoPanel extends JPanel {
             title.setFont(new Font("SansSerif", Font.BOLD, 34));
             title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel genre = new JLabel("Жанр: " + anime.genre);
+            JLabel genre = new JLabel("Жанр: " + (anime.genre != null ? anime.genre : "Не указан"));
             genre.setForeground(Color.LIGHT_GRAY);
             genre.setFont(new Font("SansSerif", Font.PLAIN, 16));
             genre.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -87,32 +93,38 @@ public class AnimeInfoPanel extends JPanel {
             rating.setFont(new Font("SansSerif", Font.BOLD, 22));
             rating.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            // Этот блок уже должен быть в вашем AnimeInfoPanel.java
-// Найдите и убедитесь, что код выглядит так:
-
             JPanel imagePanel = new JPanel();
             imagePanel.setBackground(UIStyles.BACKGROUND);
             imagePanel.setLayout(new FlowLayout(FlowLayout.CENTER));
             imagePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            try {
-                String imagePath = anime.imagePath;
-                System.out.println("Загружаю картинку: " + imagePath);
-                ImageIcon imageIcon = new ImageIcon(new URL(imagePath));
-                Image image = imageIcon.getImage();
-                Image scaledImage = image.getScaledInstance(300, 400, Image.SCALE_SMOOTH);
-                JLabel imageLabel = new JLabel(new ImageIcon(scaledImage));
-                imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                imagePanel.add(imageLabel);
-            } catch (Exception e) {
-                System.out.println("Ошибка загрузки картинки: " + e.getMessage());
-                JLabel noImage = new JLabel("Нет изображения");
-                noImage.setForeground(Color.GRAY);
-                noImage.setFont(new Font("SansSerif", Font.PLAIN, 14));
-                imagePanel.add(noImage);
+            String imagePath = anime.imagePath;
+            if (imagePath != null && !imagePath.isEmpty()) {
+                try {
+                    ImageIcon imageIcon;
+                    if (imagePath.startsWith("http")) {
+                        imageIcon = new ImageIcon(new URL(imagePath));
+                    } else {
+                        imageIcon = new ImageIcon(imagePath);
+                    }
+                    Image image = imageIcon.getImage();
+                    if (image != null) {
+                        Image scaledImage = image.getScaledInstance(300, 400, Image.SCALE_SMOOTH);
+                        JLabel imageLabel = new JLabel(new ImageIcon(scaledImage));
+                        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                        imagePanel.add(imageLabel);
+                    } else {
+                        addNoImageLabel(imagePanel);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Ошибка загрузки картинки: " + e.getMessage());
+                    addNoImageLabel(imagePanel);
+                }
+            } else {
+                addNoImageLabel(imagePanel);
             }
 
-            JTextArea desc = new JTextArea(anime.description);
+            JTextArea desc = new JTextArea();
             desc.setLineWrap(true);
             desc.setWrapStyleWord(true);
             desc.setEditable(false);
@@ -121,10 +133,16 @@ public class AnimeInfoPanel extends JPanel {
             desc.setFont(new Font("SansSerif", Font.PLAIN, 16));
             desc.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+            String descriptionText = anime.description;
+            if (descriptionText == null || descriptionText.isEmpty()) {
+                descriptionText = "Описание отсутствует";
+            }
+            desc.setText(descriptionText);
+
             JScrollPane descScroll = new JScrollPane(desc);
             descScroll.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60), 1));
             descScroll.setBackground(UIStyles.PANEL);
-            descScroll.setMaximumSize(new Dimension(800, 200));
+            descScroll.setMaximumSize(new Dimension(800, 300));
             descScroll.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             mainPanel.add(title);
@@ -149,6 +167,16 @@ public class AnimeInfoPanel extends JPanel {
 
         } catch (Exception e) {
             e.printStackTrace();
+            JLabel error = new JLabel("Ошибка загрузки: " + e.getMessage());
+            error.setForeground(Color.RED);
+            add(error);
         }
+    }
+
+    private void addNoImageLabel(JPanel panel) {
+        JLabel noImage = new JLabel("Нет изображения");
+        noImage.setForeground(Color.GRAY);
+        noImage.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        panel.add(noImage);
     }
 }

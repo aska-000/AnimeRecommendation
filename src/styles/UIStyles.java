@@ -3,7 +3,6 @@ package styles;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -12,14 +11,9 @@ public class UIStyles {
     public static final Color BACKGROUND = new Color(18, 18, 18);
     public static final Color PANEL = new Color(30, 30, 30);
     public static final Color PURPLE = new Color(139, 92, 246);
-    public static final Color PURPLE_HOVER = new Color(168, 85, 247);
     public static final Color SIDEBAR = new Color(12, 12, 12);
     public static final Color TEXT = Color.WHITE;
     public static final Color BUTTON_GRAY = new Color(60, 60, 60);
-
-    public static Font titleFont() {
-        return new Font("SansSerif", Font.BOLD, 28);
-    }
 
     public static Font normalFont() {
         return new Font("SansSerif", Font.PLAIN, 14);
