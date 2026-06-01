@@ -44,9 +44,6 @@ public class AnimeListPanel extends JPanel {
         searchPanel.setBackground(UIStyles.BACKGROUND);
         searchPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 20));
 
-        JLabel searchLabel = new JLabel("🔍");
-        searchLabel.setForeground(Color.WHITE);
-        searchLabel.setFont(new Font("SansSerif", Font.PLAIN, 18));
 
         searchField = new JTextField("поиск", 15);
         searchField.setBackground(new Color(45, 45, 45));
@@ -91,7 +88,6 @@ public class AnimeListPanel extends JPanel {
         searchField.addActionListener(e -> filterAnime());
         genreFilter.addActionListener(e -> filterAnime());
 
-        searchPanel.add(searchLabel);
         searchPanel.add(searchField);
         searchPanel.add(Box.createHorizontalStrut(10));
         searchPanel.add(genreLabel);

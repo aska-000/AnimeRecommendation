@@ -41,12 +41,13 @@ public class AnimeService {
         BDAnime.connectionDB();
         BDAnime.initSchema();
 
+
         if (BDAnime.isDatabaseEmpty()) {
             System.out.println("База данных пуста, загружаю данные...");
             BDAnime.seedData();
             BDAnime.syncWithAPI();
         } else {
-            System.out.println("Данные уже есть в базе");
+            System.out.println("Данные уже есть в базе, загрузка не требуется");
         }
     }
 }

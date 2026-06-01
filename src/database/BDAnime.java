@@ -269,4 +269,10 @@ public class BDAnime {
         st.close();
         return count == 0;
     }
+
+    public static void closeDB() throws SQLException {
+        if (rs != null) rs.close();
+        if (stat != null) stat.close();
+        if (conn != null) conn.close();
+    }
 }
